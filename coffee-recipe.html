@@ -413,24 +413,28 @@
     <input class="form-input" id="inputName" type="text" placeholder="例：オーバーポア">
   </div>
 
-  <div class="form-row">
-    <div class="form-group">
-      <label class="form-label">豆の量 (g)</label>
-      <input class="form-input" id="inputBean" type="number" placeholder="15">
-    </div>
-    <div class="form-group">
-      <label class="form-label">お湯の量 (ml)</label>
-      <input class="form-input" id="inputWater" type="number" placeholder="250">
-    </div>
+  <div class="form-group">
+    <label class="form-label">豆の量 (g)</label>
+    <input class="form-input" id="inputBean" type="number" placeholder="15">
   </div>
 
   <div class="form-group">
-    <label class="form-label">お湯の温度 (℃)</label>
+    <label class="form-label">挽き目</label>
+    <input class="form-input" id="inputGrind" type="text" placeholder="例：中細挽き">
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">湯量 (ml)</label>
+    <input class="form-input" id="inputWater" type="number" placeholder="250">
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">温度 (℃)</label>
     <input class="form-input" id="inputTemp" type="number" placeholder="92">
   </div>
 
   <div class="form-group">
-    <label class="form-label">その他準備</label>
+    <label class="form-label">その他</label>
     <input class="form-input" id="inputPrep" type="text" placeholder="例：ペーパーフィルターをリンス済み">
   </div>
 
@@ -445,17 +449,17 @@
 
     <!-- 1〜4段階 (秒数＋量) -->
     <div class="pouring-item">
-      <input class="form-input" id="pour1_time" type="number" placeholder="秒" style="width:64px;flex:none;">
+      <input class="form-input" id="pour1_time" type="number" value="30" style="width:64px;flex:none;">
       <span style="color:var(--brown-muted);font-size:13px;flex-shrink:0;">秒後</span>
       <input class="form-input" id="pour1_amount" type="number" placeholder="お湯(ml)">
     </div>
     <div class="pouring-item">
-      <input class="form-input" id="pour2_time" type="number" placeholder="秒" style="width:64px;flex:none;">
+      <input class="form-input" id="pour2_time" type="number" value="60" style="width:64px;flex:none;">
       <span style="color:var(--brown-muted);font-size:13px;flex-shrink:0;">秒後</span>
       <input class="form-input" id="pour2_amount" type="number" placeholder="お湯(ml)">
     </div>
     <div class="pouring-item">
-      <input class="form-input" id="pour3_time" type="number" placeholder="秒" style="width:64px;flex:none;">
+      <input class="form-input" id="pour3_time" type="number" value="90" style="width:64px;flex:none;">
       <span style="color:var(--brown-muted);font-size:13px;flex-shrink:0;">秒後</span>
       <input class="form-input" id="pour3_amount" type="number" placeholder="お湯(ml)">
     </div>
@@ -503,6 +507,7 @@ recipes = [
     id: 1,
     name: "オーバーポア",
     bean: 15,
+    grind: "中細挽き",
     water: 250,
     temp: 92,
     prep: "ペーパーフィルターをリンス済み",
@@ -517,6 +522,7 @@ recipes = [
     id: 2,
     name: "エタオル式ポアオーバー",
     bean: 12,
+    grind: "中粗挽き",
     water: 200,
     temp: 95,
     prep: "コーヒーグラインダーで中粗挽き",
@@ -563,6 +569,7 @@ function showEdit(recipe) {
     document.getElementById('editTitle').textContent = 'レシピを編集';
     document.getElementById('inputName').value = recipe.name || '';
     document.getElementById('inputBean').value = recipe.bean || '';
+    document.getElementById('inputGrind').value = recipe.grind || '';
     document.getElementById('inputWater').value = recipe.water || '';
     document.getElementById('inputTemp').value = recipe.temp || '';
     document.getElementById('inputPrep').value = recipe.prep || '';
@@ -582,15 +589,21 @@ function showEdit(recipe) {
     document.getElementById('editTitle').textContent = '新しいレシピ';
     document.getElementById('inputName').value = '';
     document.getElementById('inputBean').value = '';
+    document.getElementById('inputGrind').value = '';
     document.getElementById('inputWater').value = '';
     document.getElementById('inputTemp').value = '';
     document.getElementById('inputPrep').value = '';
     document.getElementById('inputRemark').value = '';
     document.getElementById('pour0_amount').value = '';
-    for (let i = 1; i <= 4; i++) {
-      document.getElementById('pour' + i + '_time').value = '';
-      document.getElementById('pour' + i + '_amount').value = '';
-    }
+    // デフォルト値: 30秒、60秒、90秒、空欄
+    document.getElementById('pour1_time').value = '30';
+    document.getElementById('pour1_amount').value = '';
+    document.getElementById('pour2_time').value = '60';
+    document.getElementById('pour2_amount').value = '';
+    document.getElementById('pour3_time').value = '90';
+    document.getElementById('pour3_amount').value = '';
+    document.getElementById('pour4_time').value = '';
+    document.getElementById('pour4_amount').value = '';
   }
 }
 
@@ -631,8 +644,9 @@ function renderDetail(recipe) {
   html += '<div class="detail-section">';
   html += '<div class="detail-section-title">基本情報</div>';
   if (recipe.bean) html += detailRow('豆の量', recipe.bean + ' g');
-  if (recipe.water) html += detailRow('お湯の量', recipe.water + ' ml');
-  if (recipe.temp) html += detailRow('お湯の温度', recipe.temp + ' ℃');
+  if (recipe.grind) html += detailRow('挽き目', recipe.grind);
+  if (recipe.water) html += detailRow('湯量', recipe.water + ' ml');
+  if (recipe.temp) html += detailRow('温度', recipe.temp + ' ℃');
   html += '</div>';
 
   // その他準備
@@ -706,6 +720,7 @@ function saveRecipe() {
   const recipe = {
     name: name,
     bean: document.getElementById('inputBean').value ? Number(document.getElementById('inputBean').value) : null,
+    grind: document.getElementById('inputGrind').value.trim() || null,
     water: document.getElementById('inputWater').value ? Number(document.getElementById('inputWater').value) : null,
     temp: document.getElementById('inputTemp').value ? Number(document.getElementById('inputTemp').value) : null,
     prep: document.getElementById('inputPrep').value.trim() || null,
