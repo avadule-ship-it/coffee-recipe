@@ -398,6 +398,90 @@
   }
   .data-btn:active { background: var(--bg); }
   #importFile { display: none; }
+
+  /* Timer */
+  .timer-section {
+    margin: 0 20px 16px;
+    background: var(--card);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    padding: 16px;
+  }
+  .timer-display {
+    text-align: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--brown-dark);
+    margin-bottom: 12px;
+  }
+  .timer-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+  .timer-btn {
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: #fff;
+    color: var(--brown-mid);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .timer-btn.primary {
+    background: #1a1a1a;
+    color: #fff;
+    border-color: #1a1a1a;
+  }
+  .timer-btn:active { opacity: 0.8; }
+  .timer-current-step {
+    background: #1a1a1a;
+    color: #fff;
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .timer-current-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.7;
+    margin-bottom: 4px;
+  }
+  .timer-current-action {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .timer-next-step {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+  .timer-next-label {
+    font-size: 11px;
+    color: var(--brown-light);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .timer-next-action {
+    font-size: 14px;
+    color: var(--brown-mid);
+    font-weight: 500;
+  }
+  .timer-flash {
+    animation: flash 0.5s ease-in-out 3;
+  }
+  @keyframes flash {
+    0%, 100% { background: #1a1a1a; }
+    50% { background: #444; }
+  }
 </style>
 </head>
 <body>
@@ -425,6 +509,21 @@
     <div class="detail-actions">
       <button class="btn-outline" onclick="showEdit(currentRecipe)">編集</button>
       <button class="btn-outline danger" onclick="confirmDelete()">削除</button>
+    </div>
+  </div>
+  <div class="timer-section" id="timerSection" style="display:none;">
+    <div class="timer-display" id="timerDisplay">0:00</div>
+    <div class="timer-controls">
+      <button class="timer-btn primary" id="timerStartBtn" onclick="toggleTimer()">スタート</button>
+      <button class="timer-btn" onclick="resetTimer()">リセット</button>
+    </div>
+    <div class="timer-current-step" id="timerCurrentStep">
+      <div class="timer-current-label">現在</div>
+      <div class="timer-current-action" id="timerCurrentAction">スタートを押してください</div>
+    </div>
+    <div class="timer-next-step" id="timerNextStep">
+      <div class="timer-next-label">次のステップ</div>
+      <div class="timer-next-action" id="timerNextAction">-</div>
     </div>
   </div>
   <div id="detailBody"></div>
@@ -600,8 +699,120 @@ function nextId() {
   return recipes.length > 0 ? Math.max(...recipes.map(r => r.id)) + 1 : 1;
 }
 
+// ========= タイマー =========
+let timerInterval = null;
+let timerSeconds = 0;
+let timerRunning = false;
+let timerPours = [];
+let lastStepIndex = -1;
+
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function initTimer(pours) {
+  timerPours = pours.filter(p => p.amount);
+  timerSeconds = 0;
+  timerRunning = false;
+  lastStepIndex = -1;
+  document.getElementById('timerDisplay').textContent = '0:00';
+  document.getElementById('timerStartBtn').textContent = 'スタート';
+  updateTimerSteps();
+
+  // タイマーセクションを表示（投入スケジュールがある場合のみ）
+  document.getElementById('timerSection').style.display = timerPours.length > 0 ? 'block' : 'none';
+}
+
+function toggleTimer() {
+  if (timerRunning) {
+    stopTimer();
+  } else {
+    startTimer();
+  }
+}
+
+function startTimer() {
+  timerRunning = true;
+  document.getElementById('timerStartBtn').textContent = 'ストップ';
+  timerInterval = setInterval(function() {
+    timerSeconds++;
+    document.getElementById('timerDisplay').textContent = formatTime(timerSeconds);
+    updateTimerSteps();
+  }, 1000);
+}
+
+function stopTimer() {
+  timerRunning = false;
+  document.getElementById('timerStartBtn').textContent = 'スタート';
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+}
+
+function resetTimer() {
+  stopTimer();
+  timerSeconds = 0;
+  lastStepIndex = -1;
+  document.getElementById('timerDisplay').textContent = '0:00';
+  updateTimerSteps();
+}
+
+function updateTimerSteps() {
+  const currentEl = document.getElementById('timerCurrentAction');
+  const nextEl = document.getElementById('timerNextAction');
+  const currentStepEl = document.getElementById('timerCurrentStep');
+
+  if (timerPours.length === 0) {
+    currentEl.textContent = '投入スケジュールがありません';
+    nextEl.textContent = '-';
+    return;
+  }
+
+  // 現在のステップを見つける
+  let currentIndex = -1;
+  for (let i = timerPours.length - 1; i >= 0; i--) {
+    if (timerSeconds >= timerPours[i].time) {
+      currentIndex = i;
+      break;
+    }
+  }
+
+  // ステップが変わったらフラッシュ
+  if (currentIndex !== lastStepIndex && currentIndex >= 0) {
+    currentStepEl.classList.remove('timer-flash');
+    void currentStepEl.offsetWidth; // reflow
+    currentStepEl.classList.add('timer-flash');
+    lastStepIndex = currentIndex;
+  }
+
+  // 現在のステップ表示
+  if (currentIndex < 0) {
+    const firstPour = timerPours[0];
+    const remaining = firstPour.time - timerSeconds;
+    currentEl.textContent = '準備中... あと ' + remaining + '秒';
+  } else {
+    const pour = timerPours[currentIndex];
+    const label = pour.time === 0 ? '今すぐ' : pour.time + '秒';
+    currentEl.textContent = label + ' → ' + pour.amount + 'ml 投入';
+  }
+
+  // 次のステップ表示
+  const nextIndex = currentIndex + 1;
+  if (nextIndex < timerPours.length) {
+    const nextPour = timerPours[nextIndex];
+    const remaining = nextPour.time - timerSeconds;
+    nextEl.textContent = remaining + '秒後 → ' + nextPour.amount + 'ml';
+  } else {
+    nextEl.textContent = '完了';
+  }
+}
+
 // ========= 画面切り替え =========
 function showList() {
+  resetTimer();
   document.getElementById('listView').classList.add('active');
   document.getElementById('detailView').classList.remove('active');
   document.getElementById('editView').classList.remove('active');
@@ -615,6 +826,8 @@ function showDetail(recipe) {
   document.getElementById('detailView').classList.add('active');
   document.getElementById('editView').classList.remove('active');
   document.getElementById('fabBtn').style.display = 'none';
+  resetTimer();
+  initTimer(recipe.pours || []);
   renderDetail(recipe);
 }
 
