@@ -498,12 +498,13 @@
 
 <script>
 // ========= データ管理 =========
+const STORAGE_KEY = 'coffee_recipes';
 let recipes = [];
 let currentRecipe = null;
 let isEditing = false; // 編集中のレシピがある場合のID
 
-// サンプルデータ（初期状態）
-recipes = [
+// サンプルデータ（初回用）
+const defaultRecipes = [
   {
     id: 1,
     name: "オーバーポア",
@@ -535,6 +536,37 @@ recipes = [
     remark: "湯温は高めにする"
   }
 ];
+
+// localStorageからレシピを読み込み
+function loadRecipes() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    console.log('localStorage読み込み:', saved ? 'データあり' : 'データなし');
+    if (saved) {
+      recipes = JSON.parse(saved);
+      console.log('読み込んだレシピ数:', recipes.length);
+    } else {
+      recipes = defaultRecipes.slice();
+      saveToStorage();
+      console.log('デフォルトレシピを保存しました');
+    }
+  } catch (e) {
+    console.error('localStorage エラー:', e);
+    alert('このブラウザではデータの保存ができません。\nローカルファイルではなくWebサーバー経由でアクセスしてください。');
+    recipes = defaultRecipes.slice();
+  }
+}
+
+// localStorageにレシピを保存
+function saveToStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes));
+    console.log('保存完了:', recipes.length, '件');
+  } catch (e) {
+    console.error('保存エラー:', e);
+    alert('データの保存に失敗しました。');
+  }
+}
 
 function nextId() {
   return recipes.length > 0 ? Math.max(...recipes.map(r => r.id)) + 1 : 1;
@@ -742,6 +774,7 @@ function saveRecipe() {
     recipes.push(recipe);
   }
 
+  saveToStorage();
   showDetail(recipe);
 }
 
@@ -755,6 +788,7 @@ function closeDeleteModal() {
 }
 function executeDelete() {
   recipes = recipes.filter(r => r.id !== currentRecipe.id);
+  saveToStorage();
   closeDeleteModal();
   showList();
 }
@@ -765,7 +799,8 @@ function escapeHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// 初期描画
+// 初期化
+loadRecipes();
 renderList();
 </script>
 </body>
