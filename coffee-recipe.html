@@ -409,11 +409,12 @@
   }
   .timer-display {
     text-align: center;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 48px;
-    font-weight: 700;
+    font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+    font-size: 56px;
+    font-weight: 600;
     color: var(--brown-dark);
     margin-bottom: 12px;
+    letter-spacing: 2px;
   }
   .timer-controls {
     display: flex;
@@ -511,6 +512,7 @@
       <button class="btn-outline danger" onclick="confirmDelete()">削除</button>
     </div>
   </div>
+  <div id="detailBody"></div>
   <div class="timer-section" id="timerSection" style="display:none;">
     <div class="timer-display" id="timerDisplay">0:00</div>
     <div class="timer-controls">
@@ -526,7 +528,7 @@
       <div class="timer-next-action" id="timerNextAction">-</div>
     </div>
   </div>
-  <div id="detailBody"></div>
+  <div class="scroll-pad"></div>
 </div>
 
 <!-- ===== EDIT VIEW ===== -->
