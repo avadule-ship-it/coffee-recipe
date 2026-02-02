@@ -375,6 +375,29 @@
 
   /* Scroll padding for FAB */
   .scroll-pad { height: 80px; }
+
+  /* Data management */
+  .data-actions {
+    display: flex;
+    gap: 10px;
+    padding: 20px;
+    padding-top: 10px;
+  }
+  .data-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    color: var(--brown-mid);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .data-btn:active { background: var(--bg); }
+  #importFile { display: none; }
 </style>
 </head>
 <body>
@@ -386,6 +409,11 @@
     <p>お気に入りのレシピを保存しましょう</p>
   </div>
   <div id="recipeList" class="list-view-body"></div>
+  <div class="data-actions">
+    <button class="data-btn" onclick="exportRecipes()">エクスポート</button>
+    <button class="data-btn" onclick="document.getElementById('importFile').click()">インポート</button>
+    <input type="file" id="importFile" accept=".json" onchange="importRecipes(event)">
+  </div>
   <div class="scroll-pad"></div>
 </div>
 
@@ -791,6 +819,53 @@ function executeDelete() {
   saveToStorage();
   closeDeleteModal();
   showList();
+}
+
+// ========= エクスポート/インポート =========
+function exportRecipes() {
+  if (recipes.length === 0) {
+    alert('エクスポートするレシピがありません。');
+    return;
+  }
+  const data = JSON.stringify(recipes, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'coffee-recipes.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importRecipes(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) {
+        throw new Error('Invalid format');
+      }
+      // IDを振り直して追加
+      let maxId = recipes.length > 0 ? Math.max(...recipes.map(r => r.id)) : 0;
+      imported.forEach(r => {
+        maxId++;
+        r.id = maxId;
+        recipes.push(r);
+      });
+      saveToStorage();
+      renderList();
+      alert(imported.length + '件のレシピをインポートしました。');
+    } catch (err) {
+      alert('ファイルの読み込みに失敗しました。\n正しいJSONファイルか確認してください。');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
 }
 
 // ========= ユーティリティ =========
